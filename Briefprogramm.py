@@ -19,6 +19,8 @@ class App(customtkinter.CTk):
     def __init__(self):
         super().__init__()
 
+        self.bind("<Escape>", self.close_briefprogramm)
+
         # Configure window
         self.title("")
         self.filename = "Brief"
@@ -145,6 +147,10 @@ class App(customtkinter.CTk):
             print("Folder %s exists." % path)
 
         return path
+    
+    
+    def close_briefprogramm(self, event):
+        self.destroy()
 
 
 

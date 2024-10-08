@@ -1,0 +1,11 @@
+How to update python?
+
+0. You need to install new version of python and 
+   then update using the update-alternatives command in linux.
+1. Firstly, you need to download and build new python version.
+   Therefore you can use a script from github (https://github.com/parafoxia/python-scripts).
+   It is downloaded at ~/Develop/update_python
+2. Then type
+   sudo update-alternatives --install /usr/bin/python3 python3 /usr/local/bin/python3.12 1
+                                      <link>           <name>  <path_to_bin>  <prio>
+ 
