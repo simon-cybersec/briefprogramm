@@ -133,11 +133,11 @@ class App(customtkinter.CTk):
     def create_brief_directory(self):
 
         # Check if data directory structure already exists
-        if not os.path.exists("./Briefe_von_Alex/"):
-            os.mkdir("./Briefe_von_Alex/")
+        if not os.path.exists("./Briefe/"):
+            os.mkdir("./Briefe/")
         
         # Create folder name
-        path = "./Briefe_von_Alex/"
+        path = "./Briefe/"
 
         # Create folder
         try:
