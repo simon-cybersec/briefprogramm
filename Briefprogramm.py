@@ -23,8 +23,10 @@ class App(customtkinter.CTk):
 
         # Configure window
         self.title("")
-        self.filename = "Brief"
-        self.path = self.create_brief_directory()
+        self.filename = "temp_filename"
+        self.store_dir = "./Briefe/"
+        self.create_storage_directory(self.store_dir)
+
         
         self.geometry("1500x1000")       # width, height
 
@@ -47,8 +49,8 @@ class App(customtkinter.CTk):
         self.grid_columnconfigure(3, weight=1)
 
         self.grid_rowconfigure(0, weight=0)     # Title
-        self.grid_rowconfigure(1, weight=1)     # Fertig und Drucken button
-        self.grid_rowconfigure(2, weight=0)     # Textbox
+        self.grid_rowconfigure(1, weight=1)     # Textbox
+        self.grid_rowconfigure(2, weight=0)     # Fertig und Drucken button
 
         
 
@@ -61,10 +63,11 @@ class App(customtkinter.CTk):
 
         # Textbox
         self.textbox = customtkinter.CTkTextbox(self,
-                                                corner_radius=8, 
+                                                corner_radius=0, 
                                                 font=custom_font_textbox,
                                                 border_width=2,
-                                                border_color="black")
+                                                border_color="black",
+                                                activate_scrollbars=False)
         self.textbox.focus_set()
         self.textbox.grid(row=1, column=0, columnspan=4, sticky="nsew", padx=self.padding_x +50, pady=self.padding_y)
         #self.textbox.insert("0.0", "Some example text!\n" * 10)
@@ -84,6 +87,12 @@ class App(customtkinter.CTk):
         #                                             command=self.button_fertig_click)
         #self.button_drucken.grid(row=2, column=2, padx=10, pady=self.padding_y, sticky="nwse")
 
+        # create CTk scrollbar
+        textbox_scrollbar = customtkinter.CTkScrollbar(self, command=self.textbox.yview)
+        textbox_scrollbar.grid(row=1, column=3, sticky="ens")
+        # connect textbox scroll event to CTk scrollbar
+        self.textbox.configure(yscrollcommand=textbox_scrollbar.set)
+
         
 
 
@@ -92,8 +101,19 @@ class App(customtkinter.CTk):
 
         text = self.textbox.get("0.0", "end")  # get text from line 0 character 0 till the end
 
-        if text != " ":
-            self.filename = "Brief_" + datetime.now().strftime('%Y-%m-%d_%H-%M-%S') + ".docx"
+        if text != None:
+
+            self.progressbar = customtkinter.CTkProgressBar(app, orientation="horizontal")
+            self.progressbar.grid(row=2, column=1, sticky="nwse")
+            self.progressbar.start()
+            
+            self.button_fertig.destroy()            
+
+            #number_of_files = len(os.listdir(self.store_dir))
+            number_of_briefe = len([b for b in os.listdir(self.store_dir) if b.endswith('.docx')])
+
+            #self.filename = "Brief_" + datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
+            self.filename = "Brief-" + str(number_of_briefe + 1)
 
             document = Document()
 
@@ -116,39 +136,45 @@ class App(customtkinter.CTk):
             p.style = document.styles['Normal']
             p.add_run(text).bold = True
 
-            document.save(self.path + self.filename)
+            # Save as .docx file
+            document.save(self.store_dir + self.filename + ".docx")
 
             try:
+                # Convert to PDF. Libre office needs to be installed!
                 #libreoffice --headless --convert-to pdf filename.doc
-                subprocess.run(["soffice", "--headless", "--convert-to", "pdf", "--outdir", self.path, self.path+self.filename]) 
-                #subprocess.run(["abiword", "--to=pdf", self.filename]) 
+                subprocess.run(["soffice", "--headless", "--convert-to", "pdf", "--outdir", self.store_dir, self.store_dir+self.filename+".docx"]) 
+                
             except:
                 print("Sth went problematic when converting to pdf.") 
 
+
         # Exit program
         print("Exiting. File: ", self.filename)
+        self.progressbar.stop()
         self.destroy() 
 
 
-    def create_brief_directory(self):
-
-        # Check if data directory structure already exists
-        if not os.path.exists("./Briefe/"):
-            os.mkdir("./Briefe/")
+    # Create storage directory
+    def create_storage_directory(self, storage_directory):
         
-        # Create folder name
-        path = "./Briefe/"
-
         # Create folder
         try:
-            os.mkdir(path)
-            print("Folder %s created. \n" % path)
+            os.mkdir(storage_directory)
+            print("Folder %s created. \n" % storage_directory)
         except FileExistsError:
-            print("Folder %s exists." % path)
+            print("Folder %s exists." % storage_directory)
 
-        return path
+    # Print
+    def printer_controll(self, printer_ip, printer_port, filename):
+        printer_command = "cat " + filename + " | netcat -w 1 " + printer_ip + " " + printer_port
+        try:
+            os.system(printer_command)
+        except:
+            print("Failed when trying to print")
+
     
     
+    # Close window
     def close_briefprogramm(self, event):
         self.destroy()
 
