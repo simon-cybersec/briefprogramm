@@ -1,13 +1,14 @@
 import customtkinter
 from pathlib import Path
 # For creation of data directory
-import os
+import os, sys
 from datetime import datetime
 
 from docx import Document
 from docx.shared import Pt, Mm
 
 import subprocess
+import csv
 
 customtkinter.set_appearance_mode("Light")  # Modes: "System" (standard), "Dark", "Light"
 customtkinter.set_default_color_theme("blue")  # Themes: "blue" (standard), "green", "dark-blue"
@@ -17,23 +18,19 @@ customtkinter.set_default_color_theme("blue")  # Themes: "blue" (standard), "gre
 
 class App(customtkinter.CTk):
     def __init__(self):
-        super().__init__()
+        super().__init__()        
 
         self.bind("<Escape>", self.close_briefprogramm)
 
         # Configure window
         self.title("")
-        self.filename = "temp_filename"
-        self.store_dir = "./Briefe/"
-        self.create_storage_directory(self.store_dir)
-
-        
-        self.geometry("1500x1000")       # width, height
-
+                
         # Fullscreen
+        self.geometry("1500x1000")       # width, height
         self.wm_attributes('-fullscreen', True)
         self.state('normal')  # This call is appears to be necessary to make the app actually go full screen.
 
+        # Fonts 
         custom_font_textbox = ("Times",38,'bold')
         custom_font_title = ("Times",42,'bold')
         custom_font_button = ("Times",24,'bold')
@@ -93,12 +90,39 @@ class App(customtkinter.CTk):
         # connect textbox scroll event to CTk scrollbar
         self.textbox.configure(yscrollcommand=textbox_scrollbar.set)
 
+        ########
+
+        # Temporary filename
+        self.filename = "temp_filename"
+
+        # Directory to store the files at
+        self.store_dir = "./Briefe/"
+        self.create_storage_directory(self.store_dir)
+
+        # Get Wifi SSID
+        self.wifi_ssid = sys.argv[1]
+        print("my wifi_ssid: " + self.wifi_ssid)
         
+        # Get printer name:
+        # The printer is then chosen depending on the wifi the computer is connected to.
+        # In the myPrinters.csv is the mapping wifi-ssid -> printer name
+        # The user needs to write it into the myPrinters.csv like: wifi_ssid, printer_name
+        # Incase you need the name of your printer, go to http://localhost:631/printers (Cups need to be installed) and look for your printers name
+        csv_filename = "myPrinters.csv"
+        with open(csv_filename, newline='') as csvfile:
+            printerreader = csv.reader(csvfile, delimiter=',')
+            for row in printerreader:
+                if row[0] == self.wifi_ssid:
+                    print("Using this printer: " + row[1])
+                    break
 
 
-
+    #
+    # Clicking Button "Fertig"
+    #
     def button_fertig_click(self):
 
+        # Get written text
         text = self.textbox.get("0.0", "end")  # get text from line 0 character 0 till the end
 
         if text != None:
@@ -109,14 +133,15 @@ class App(customtkinter.CTk):
             
             self.button_fertig.destroy()            
 
+            # Get number of files in storage directory for file naming.
             #number_of_files = len(os.listdir(self.store_dir))
             number_of_briefe = len([b for b in os.listdir(self.store_dir) if b.endswith('.docx')])
 
-            #self.filename = "Brief_" + datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
+            # Filename 
             self.filename = "Brief-" + str(number_of_briefe + 1)
 
+            # Setting up a Din A4 document
             document = Document()
-
             section = document.sections[0]
             section.page_height = Mm(297)
             section.page_width = Mm(210)
@@ -139,47 +164,63 @@ class App(customtkinter.CTk):
             # Save as .docx file
             document.save(self.store_dir + self.filename + ".docx")
 
-            try:
-                # Convert to PDF. Libre office needs to be installed!
-                #libreoffice --headless --convert-to pdf filename.doc
-                subprocess.run(["soffice", "--headless", "--convert-to", "pdf", "--outdir", self.store_dir, self.store_dir+self.filename+".docx"]) 
-                
-            except:
-                print("Sth went problematic when converting to pdf.") 
+            # Convert to pdf file
+            self.convert_docx_to_pdf(docx_file=self.store_dir+self.filename+".docx", output_directory=self.store_dir)
+
+            print("\nFile: " + self.filename + "\nExit.")
+            self.progressbar.stop()
+
+        else:
+            print("Nothing written.")
+
+        # Exit program        
+        self.close_briefprogramm(event=None)
 
 
-        # Exit program
-        print("Exiting. File: ", self.filename)
-        self.progressbar.stop()
-        self.destroy() 
-
-
-    # Create storage directory
+    #
+    # Create storage directory for the files
+    #
     def create_storage_directory(self, storage_directory):
         
-        # Create folder
         try:
             os.mkdir(storage_directory)
-            print("Folder %s created. \n" % storage_directory)
+            print("Folder " + storage_directory + " created.")
         except FileExistsError:
-            print("Folder %s exists." % storage_directory)
+            print("Folder " + storage_directory + "found.")
 
-    # Print
-    def printer_controll(self, printer_ip, printer_port, filename):
-        printer_command = "cat " + filename + " | netcat -w 1 " + printer_ip + " " + printer_port
+    
+    #
+    # Convert a docx file to pdf. (Libre office needs to be installed!)
+    #
+    def convert_docx_to_pdf(self, docx_file, output_directory):
         try:
-            os.system(printer_command)
+            # Command: soffice --headless --convert-to pdf filename.doc
+            subprocess.run(["soffice", "--headless", "--convert-to", "pdf", "--outdir", output_directory, docx_file]) 
+            print("Converted successfully to PDF.")
         except:
-            print("Failed when trying to print")
+            print("Sth went wrong when converting to PDF.") 
 
+    #
+    # Print PDF file
+    #
+    def print_pdf(self, printer_name, pdf_file):
+        
+        # For example: lp -d EPSON_ET_2850_Series Brief-1.pdf
+        try:
+            subprocess.run(["lp", "-d", printer_name, pdf_file])
+            print("Printing...")
+        except:
+            print("Failed when trying to print.")
     
     
+    #
     # Close window
+    #
     def close_briefprogramm(self, event):
         self.destroy()
 
 
-
+# --- Program starts here ---
 if __name__ == "__main__":
     app = App()
     app.mainloop()
