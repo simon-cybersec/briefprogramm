@@ -40,11 +40,12 @@ class App(customtkinter.CTk):
         self.padding_y = 20
         
         # Grid
+        # 4 Colums
         self.grid_columnconfigure(0, weight=1)
         self.grid_columnconfigure(1, weight=0)
         self.grid_columnconfigure(2, weight=0)
         self.grid_columnconfigure(3, weight=1)
-
+        # 3 Rows
         self.grid_rowconfigure(0, weight=0)     # Title
         self.grid_rowconfigure(1, weight=1)     # Textbox
         self.grid_rowconfigure(2, weight=0)     # Fertig und Drucken button
@@ -125,14 +126,8 @@ class App(customtkinter.CTk):
         # Get written text
         text = self.textbox.get("0.0", "end")  # get text from line 0 character 0 till the end
 
-        if text != None:
-
-            self.progressbar = customtkinter.CTkProgressBar(app, orientation="horizontal")
-            self.progressbar.grid(row=2, column=1, sticky="nwse")
-            self.progressbar.start()
+        if len(text) > 1:
             
-            self.button_fertig.destroy()            
-
             # Get number of files in storage directory for file naming.
             #number_of_files = len(os.listdir(self.store_dir))
             number_of_briefe = len([b for b in os.listdir(self.store_dir) if b.endswith('.docx')])
@@ -168,7 +163,6 @@ class App(customtkinter.CTk):
             self.convert_docx_to_pdf(docx_file=self.store_dir+self.filename+".docx", output_directory=self.store_dir)
 
             print("\nFile: " + self.filename + "\nExit.")
-            self.progressbar.stop()
 
         else:
             print("Nothing written.")
