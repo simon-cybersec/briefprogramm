@@ -11,6 +11,8 @@ import csv
 
 import contextlib
 
+import getpass
+
 customtkinter.set_appearance_mode("Light")  # Modes: "System" (standard), "Dark", "Light"
 customtkinter.set_default_color_theme("blue")  # Themes: "blue" (standard), "green", "dark-blue"
 
@@ -92,7 +94,9 @@ class App(customtkinter.CTk):
         self.filename = "temp_filename"
 
         # Directory to store the files at
-        self.store_dir = "./Briefe/"
+        self.username = getpass.getuser()
+        print("username: " + self.username)
+        self.store_dir = "/home/"+self.username+"/BRIEFE/"
         self.create_storage_directory(self.store_dir)
 
         # Get Wifi SSID
